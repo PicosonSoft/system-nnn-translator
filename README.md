@@ -44,9 +44,9 @@ Note: The `inject` tool will take a single path for the decoded SPT, but if so, 
 To decode, extract, translate, inject and re-encode all SPT files in the current directory, you can use the following command:
 
 ```bash
-find . -maxpath 1 -name "*.spt" -exec decode {} \;
-find . -maxpath 1 -name "*.tps" -exec extract {} \;
-find . -maxpath 1 -name "*_ja.json" -exec azure-translate {} <Subscription-Key> <Subscription-Region> \;
-find . -maxpath 1 -name "*.tps" -exec inject {} \;
-find . -maxpath 1 -name "*.tps" -exec decode {} \;
+find . -maxdepth 1 -name "*.spt" -exec decode {} \;
+find . -maxdepth 1 -name "*.tps" -exec extract {} \;
+find . -maxdepth 1 -name "*_ja.json" -exec azure-translate {} <Subscription-Key> <Subscription-Region> \;
+find . -maxdepth 1 -name "*.tps" -exec inject {} \;
+find . -maxdepth 1 -name "en/*.tps" -exec decode {} \;
 ```

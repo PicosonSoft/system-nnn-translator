@@ -11,22 +11,37 @@
 #include <iconv.h>
 #include <filesystem>
 #include <algorithm>
+#include <regex>
+#include <functional>
 #include <nlohmann/json.hpp>
 
-#if 0
-TODO:
-Some utf8 characters cannot be converted into shift-jis,
-so do some replacement after translation.
-This is a list of some of the characters found to cause error.
+#define REP(x,y) \
+    [](const std::string& s) -> std::string\
+    {\
+        return std::regex_replace( s, std::regex(#x), #y );\
+    }
 
-ï -> i
-é -> e
-ç -> c
-#endif
+
+std::vector<std::function<std::string(const std::string&)>> replacers
+{
+    REP(ï, i),
+    REP(é, e),
+    REP(ç, c),
+};
+
+std::string ReplaceBadChars(const std::string& input)
+{
+    std::string result{input};
+    for(auto& i: replacers)
+    {
+        result = i(result);
+    }
+    return result;
+}
 
 using json = nlohmann::json;
 
-int main(int argc, char* argv[]) {
+int main(int argc, char* argv[]) {    
     if (argc < 2) {
         std::cout << "Usage: " << argv[0] << " <decoded spt file> <json file>" << std::endl;
         return 1;
@@ -79,7 +94,7 @@ int main(int argc, char* argv[]) {
     }
 
     std::ifstream f(json_file);
-    json j{};
+    json j;
     try
     {
         j = json::parse(f);
@@ -88,6 +103,7 @@ int main(int argc, char* argv[]) {
     {
         std::cerr << "File: " << argv[1] << '\n';
         std::cerr << e.what() << '\n';
+        return -1;
     }
 
     std::vector<std::vector<uint8_t>> strings{};
@@ -95,7 +111,7 @@ int main(int argc, char* argv[]) {
     std::vector<uint8_t> out{};
     for(auto& json_text: j)
     {
-        std::string text{json_text["text"]};
+        std::string text{ReplaceBadChars(json_text["text"])};
         char* inptr{text.data()};
         size_t inbytesleft{text.size() + 1};
         size_t outbytesleft{inbytesleft * 4};
@@ -111,7 +127,7 @@ int main(int argc, char* argv[]) {
             {
                 std::cerr << " '" << static_cast<uint8_t>(inptr[i]) << "' " << (static_cast<uint32_t>(inptr[i]) & 0x000000ff) << std::dec;
             }
-                std::cerr << std::endl << inptr << std::endl;
+            std::cerr << std::endl << inptr << std::endl;
             iconv_close(icv);
             return -1;
         }
@@ -123,8 +139,11 @@ int main(int argc, char* argv[]) {
         std::memcpy(strings.back().data(),out.data(),string_lenght);
     }
 
+    //std::cerr << "Json String Count:" << strings.size() << std::endl;
+
     uint8_t* offset{reinterpret_cast<uint8_t*>(buffer.data())};
     std::ofstream outfile(outFilePath.c_str(), std::ios::binary);
+
     size_t string_index{0};
     while (offset < buffer.data() + fileSize) 
     {
@@ -139,6 +158,12 @@ int main(int argc, char* argv[]) {
                 ++string_count;
                 ++index;
             }
+            if(string_count != strings.size())
+            {
+                std::cerr << "JSON and SPT String Count do not match: " << string_count << "!=" << strings.size() << std::endl;
+                return -1;
+            }
+
             uint32_t chunk_size{(string_count + 4) * 4};
             for(uint32_t i = 0; i < string_count;++i)
             {

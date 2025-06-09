@@ -145,12 +145,14 @@ int main(int argc, char* argv[]) {
     std::ofstream outfile(outFilePath.c_str(), std::ios::binary);
 
     size_t string_index{0};
+    bool modified{false};
     while (offset < buffer.data() + fileSize) 
     {
         uint32_t* tags{reinterpret_cast<uint32_t*>(offset)};
         //std::cout << std::hex << offset - buffer.data() << ": " << tags[0] << " " <<  tags[1] << " " << tags[2] << " " << tags[3]<< std::endl;
         if(tags[1] == 0x66660001 && tags[2] == 0x55550002 && (tags[3] == 0x44440002 /*|| tags[3] == 0x44440001*/))
         {
+            modified = true;
             size_t index{4};
             uint32_t string_count{0};
             while(offset + index * 4 < buffer.data() + tags[4] * 4)
@@ -186,6 +188,22 @@ int main(int argc, char* argv[]) {
                 strings[i + string_index].size());
             }
             string_index += string_count;
+        }
+        else if(tags[1] == 0x66660001 && tags[2] == 0x55550002 && tags[3] == 0x44440001 && modified)
+        {
+            size_t index{4};
+            uint32_t string_offset{0};
+            int32_t difference = static_cast<int32_t>(outfile.tellp()) - (offset - buffer.data());
+            //std::cerr << "difference: " << difference << " " << static_cast<int32_t>(outfile.tellp()) << " - " << (offset - buffer.data()) << std::endl;
+            outfile.write(reinterpret_cast<char*>(tags),sizeof(uint32_t)*4);
+            while(offset + index * 4 < buffer.data() + tags[4] * 4)
+            {
+                string_offset = ((tags[index] * 4) + difference)/4;
+                //std::cerr << "String Offset Old: " << (tags[index]) << " String Offset New: " << string_offset << std::endl;                
+                outfile.write(reinterpret_cast<char*>(&string_offset),sizeof(uint32_t));
+                ++index;
+            }
+            outfile.write(reinterpret_cast<char*>(offset + ((index)*4) ),(4 * *reinterpret_cast<uint32_t*>(offset))-((index)*4));
         }
         else
         {

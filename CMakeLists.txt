@@ -50,6 +50,16 @@ find_library(SOCKET_LIB
              HINTS ${CMAKE_INSTALL_FULL_LIBDIR}
 )
 
+find_path(JSON_HPP_DIR nlohmann/json.hpp)
+
+if(JSON_HPP_DIR)
+  message(STATUS "Found nlohmann/json.hpp in: ${JSON_HPP_DIR}")
+  include_directories(${JSON_HPP_DIR})
+else()
+  message(FATAL_ERROR "json.hpp not found.")
+endif()
+
+
 add_executable(decode decode.cpp)
 
 add_executable(extract extract.cpp)
@@ -72,7 +82,7 @@ FetchContent_MakeAvailable(ollama-hpp)
 find_path(OLLAMA_HPP_DIR ollama.hpp PATHS ${CMAKE_BINARY_DIR}/_deps/ollama-hpp-src/singleheader)
 
 if(OLLAMA_HPP_DIR)
-  message(STATUS "Found ollama-hpp.h in: ${OLLAMA_HPP_DIR}")
+  message(STATUS "Found ollama-hpp in: ${OLLAMA_HPP_DIR}")
   include_directories(${OLLAMA_HPP_DIR})
 else()
   message(WARNING "ollama.hpp not found.")

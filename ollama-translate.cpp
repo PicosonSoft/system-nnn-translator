@@ -9,7 +9,7 @@
 #include <cstring>
 #include <locale>
 #include <regex>
-#include <nlohmann/json.hpp>
+#include "nlohmann/json.hpp"
 #include "ollama.hpp"
 
 using json = nlohmann::json;
@@ -52,7 +52,7 @@ int main(int argc, char* argv[]) {
 
     ollama::messages messages{};
     messages.reserve((j.size()*2)+5);
-    messages.push_back({"user","I am going to give you game dialoge lines to translate to english, consider ythe context of the story, keep the structure of every line, use Romaji for character names."});
+    messages.push_back({"user","I am going to give you game dialogue lines to translate to english, consider the context of the story, keep the structure of every line, use Romaji for given names."});
     ollama::response response{ollama::chat("7shi/llama-translate:8b-q4_K_M", messages)};
     size_t line_count{0};
     for(auto& i: j)
@@ -73,25 +73,3 @@ int main(int argc, char* argv[]) {
   std::cerr << "Translation Complete" << std::endl;
   return 0;
 }
-
-#if 0
-ollama::message command{"user","translate to english"};
-const char* line1 = u8"かかし\n暗い夜だった";
-const char* line2 = u8"かかし\nあなたのオナラが臭くなり始めたとき";
-const char* line3 = u8"かかし\n私はあなたが心の中で死んでしまったのではないかと恐れていた";
-const char* line4 = u8"かかし\nしかし、それでも私は疑問に思いました...";
-const char* line5 = u8"かかし\nあの悪質なレストランで何を食べたんですか。";
-
-int main(int argc, char* argv[]) {
-    ollama::messages messages{};
-    messages.reserve(15);
-    messages.push_back({"user","translate to english"});
-    ollama::response response{ollama::chat("7shi/llama-translate:8b-q4_K_M", messages)};
-    std::cout << response << std::endl;
-    messages.push_back({"assistant",response});
-    messages.push_back({"user",line1});
-    response = ollama::chat("7shi/llama-translate:8b-q4_K_M", messages);
-    std::cout << response << std::endl;
-    return 0;
-}
-#endif

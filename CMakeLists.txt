@@ -27,6 +27,7 @@ endif(COMMAND cmake_policy)
 project(system-nnn-translate)
 enable_language(CXX)
 enable_language(C)
+include(FetchContent)
 
 if(NOT ENV{MSYSTEM_PREFIX} STREQUAL "")
   list(APPEND CMAKE_PREFIX_PATH "$ENV{MSYSTEM_PREFIX}")
@@ -44,6 +45,10 @@ list(APPEND CMAKE_PREFIX_PATH "${CMAKE_BINARY_DIR}")
 
 find_package(Iconv REQUIRED)
 find_package(CURL REQUIRED)
+find_library(SOCKET_LIB
+             NAMES ws2_32
+             HINTS ${CMAKE_INSTALL_FULL_LIBDIR}
+)
 
 add_executable(decode decode.cpp)
 
@@ -55,3 +60,24 @@ target_link_libraries(inject PRIVATE Iconv::Iconv)
 
 add_executable(azure-translate azure-translate.cpp)
 target_link_libraries(azure-translate PRIVATE CURL::libcurl)
+
+
+FetchContent_Declare(ollama-hpp
+  GIT_REPOSITORY "https://github.com/jmont-dev/ollama-hpp.git"
+  GIT_TAG 237ceace488791b527f0f5b7b69b11ffa2fd073b
+)
+
+FetchContent_MakeAvailable(ollama-hpp)
+
+find_path(OLLAMA_HPP_DIR ollama.hpp PATHS ${CMAKE_BINARY_DIR}/_deps/ollama-hpp-src/singleheader)
+
+if(OLLAMA_HPP_DIR)
+  message(STATUS "Found ollama-hpp.h in: ${OLLAMA_HPP_DIR}")
+  include_directories(${OLLAMA_HPP_DIR})
+else()
+  message(WARNING "ollama.hpp not found.")
+endif()
+
+add_executable(ollama-translate ollama-translate.cpp)
+target_link_libraries(ollama-translate PRIVATE ${SOCKET_LIB})
+target_compile_definitions(ollama-translate PUBLIC -D_WIN32_WINNT=0x602)

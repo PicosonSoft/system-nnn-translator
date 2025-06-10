@@ -14,38 +14,20 @@
 
 using json = nlohmann::json;
 
-size_t print_response(char *ptr, size_t size, size_t nmemb, json *out){
-    std::string response{ptr , size*nmemb};
-    json r = json::parse(response);
-    if(r.contains("error"))
-    {
-      std::cerr << r << std::endl;
-      return 0;
-    }
-    for(auto& i: r)
-    {
-      for(auto& j: i["translations"])
-      {
-        out->push_back(json::object({{"text",j["text"]}}));
-      }
-    }
-    return size * nmemb;
-}
-
 int main(int argc, char* argv[]) {
-  if (argc < 4) {
+  if (argc < 2) {
       std::cout << "Usage: " << argv[0] << " input.json [output.json]" << std::endl;
       return 1;
   }
 
   std::string output_file{argv[1]};
-  if (argc == 4) 
+  if (argc == 2)
   {
     output_file = std::regex_replace( output_file, std::regex("_ja"), "_en" );
   }
   else
   {
-      output_file = argv[-3];
+      output_file = argv[2];
   }
   json j{};
   std::ifstream f(argv[1]);
@@ -68,22 +50,19 @@ int main(int argc, char* argv[]) {
 
   json out{};
 
-#if 0
     ollama::messages messages{};
     messages.reserve((j.size()*2)+5);
-    messages.push_back({"user","translate to english"});
+    messages.push_back({"user","I am going to give you game dialoge lines to translate to english, consider ythe context of the story, keep the structure of every line, use Romaji for character names."});
     ollama::response response{ollama::chat("7shi/llama-translate:8b-q4_K_M", messages)};
-#endif
     size_t line_count{0};
     for(auto& i: j)
     {
-        #if 0
-        messages.push_back({"assistant",response});
-        messages.push_back({"user",i});
+        messages.push_back({"user",i["text"]});
         response = ollama::chat("7shi/llama-translate:8b-q4_K_M", messages);
-        #endif
-        std::cerr << i << std::endl;
-        //std::cerr << "\rLines Translated: " << ++line_count << " of " << j.size() << std::flush;
+        messages.push_back({"assistant",response});
+        //std::cerr << response << std::endl;
+        out.push_back(json::object({{"text",response}}));
+        std::cerr << "\rLines Translated: " << ++line_count << " of " << j.size() << std::flush;
     }
 
   std::cerr << std::endl << "Writting " << output_file.c_str() << std::endl;

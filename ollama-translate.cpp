@@ -12,6 +12,8 @@
 #include "nlohmann/json.hpp"
 #include "ollama.hpp"
 
+#define MODEL "visual-novel-translate"
+//#define MODEL "7shi/llama-translate:8b-q4_K_M"
 using json = nlohmann::json;
 
 int main(int argc, char* argv[]) {
@@ -49,17 +51,26 @@ int main(int argc, char* argv[]) {
   }
 
   json out{};
-
+    ollama::setReadTimeout(300);
+    ollama::setWriteTimeout(300);
     ollama::messages messages{};
     messages.reserve((j.size()*2)+5);
-    messages.push_back({"user","I am going to give you game dialogue lines to translate to english, consider the context of the story, keep the structure of every line, use Romaji for given names."});
-    ollama::response response{ollama::chat("7shi/llama-translate:8b-q4_K_M", messages)};
+    //messages.push_back({"user","I am going to give you game dialogue lines to translate to english, consider the context of the story, keep the structure of every line, use Romaji for given names."});
+    ollama::response response{ollama::chat(MODEL, messages)};
     size_t line_count{0};
     for(auto& i: j)
     {
-        messages.push_back({"user",i["text"]});
-        response = ollama::chat("7shi/llama-translate:8b-q4_K_M", messages);
-        messages.push_back({"assistant",response});
+        //std::cerr << i["text"] << std::endl;
+        try{
+          messages.push_back({"user",i["text"]});
+          response = ollama::chat(MODEL, messages);
+          messages.push_back({"assistant",response});
+        } 
+        catch(ollama::exception& e)
+        {
+          std::cerr << std::endl << e.what() << std::endl;
+          return -1;
+        }
         //std::cerr << response << std::endl;
         out.push_back(json::object({{"text",response}}));
         std::cerr << "\rLines Translated: " << ++line_count << " of " << j.size() << std::flush;

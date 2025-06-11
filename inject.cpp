@@ -41,6 +41,17 @@ std::string ReplaceBadChars(const std::string& input)
 
 using json = nlohmann::json;
 
+struct SPTHEADER{
+    uint32_t Offset;
+    uint32_t Identity;
+    uint32_t Code;
+    uint32_t TableType;
+    uint32_t MessageCount;
+    uint32_t MessageTable;
+    uint32_t StringCount;
+    uint32_t StringTable;
+};
+
 int main(int argc, char* argv[]) {    
     if (argc < 2) {
         std::cout << "Usage: " << argv[0] << " <decoded spt file> <json file>" << std::endl;
@@ -144,8 +155,9 @@ int main(int argc, char* argv[]) {
     uint8_t* offset{reinterpret_cast<uint8_t*>(buffer.data())};
     std::ofstream outfile(outFilePath.c_str(), std::ios::binary);
 
-    size_t string_index{0};
     bool modified{false};
+    SPTHEADER header{};
+    std::memcpy(&header,buffer.data(),sizeof(SPTHEADER));
     while (offset < buffer.data() + fileSize) 
     {
         uint32_t* tags{reinterpret_cast<uint32_t*>(offset)};
@@ -153,41 +165,41 @@ int main(int argc, char* argv[]) {
         if(tags[1] == 0x66660001 && tags[2] == 0x55550002 && (tags[3] == 0x44440002 /*|| tags[3] == 0x44440001*/))
         {
             modified = true;
-            size_t index{4};
+            uint32_t index{4};
             uint32_t string_count{0};
             while(offset + index * 4 < buffer.data() + tags[4] * 4)
             {
                 ++string_count;
                 ++index;
             }
-            if(string_count != strings.size())
+            if((string_count != strings.size()) && (strings.size() != header.MessageCount))
             {
-                std::cerr << "JSON and SPT String Count do not match: " << string_count << "!=" << strings.size() << std::endl;
+                std::cerr << "JSON and SPT Message Count do not match: " << string_count << "!=" << strings.size() << "!=" << header.MessageCount << std::endl;
                 return -1;
             }
 
-            uint32_t chunk_size{(string_count + 4) * 4};
+            uint32_t chunk_size{index * 4};
             for(uint32_t i = 0; i < string_count;++i)
             {
-                chunk_size += strings[i + string_index].size();
+                chunk_size += strings[i].size();
             }
             uint32_t base_offset = static_cast<uint32_t>(outfile.tellp());
             chunk_size/=4;
             outfile.write(reinterpret_cast<char*>(&chunk_size),sizeof(uint32_t));
             outfile.write(reinterpret_cast<char*>(tags+1),sizeof(uint32_t)*3);
-            chunk_size=base_offset+((string_count + 4) * 4);
+            chunk_size=base_offset+(index * 4);
+            header.MessageTable = static_cast<uint32_t>(outfile.tellp())/4;
             for(uint32_t i = 0; i < string_count;++i)
             {
                 uint32_t string_offset{chunk_size/4};
                 outfile.write(reinterpret_cast<char*>(&string_offset),sizeof(uint32_t));
-                chunk_size += strings[i + string_index].size();
+                chunk_size += strings[i].size();
             }
             for(uint32_t i = 0; i < string_count;++i)
             {
-                outfile.write(reinterpret_cast<char*>(strings[i + string_index].data()),
-                strings[i + string_index].size());
+                outfile.write(reinterpret_cast<char*>(strings[i].data()),
+                strings[i].size());
             }
-            string_index += string_count;
         }
         else if(tags[1] == 0x66660001 && tags[2] == 0x55550002 && tags[3] == 0x44440001 && modified)
         {
@@ -196,12 +208,18 @@ int main(int argc, char* argv[]) {
             int32_t difference = static_cast<int32_t>(outfile.tellp()) - (offset - buffer.data());
             //std::cerr << "difference: " << difference << " " << static_cast<int32_t>(outfile.tellp()) << " - " << (offset - buffer.data()) << std::endl;
             outfile.write(reinterpret_cast<char*>(tags),sizeof(uint32_t)*4);
+            header.StringTable = static_cast<uint32_t>(outfile.tellp())/4;
             while(offset + index * 4 < buffer.data() + tags[4] * 4)
             {
                 string_offset = ((tags[index] * 4) + difference)/4;
                 //std::cerr << "String Offset Old: " << (tags[index]) << " String Offset New: " << string_offset << std::endl;                
                 outfile.write(reinterpret_cast<char*>(&string_offset),sizeof(uint32_t));
                 ++index;
+            }
+            if((index-4) != header.StringCount)
+            {
+                std::cerr << "JSON and SPT String Count do not match: " << (index - 4) << "!=" << header.StringCount << std::endl;
+                return -1;
             }
             outfile.write(reinterpret_cast<char*>(offset + ((index)*4) ),(4 * *reinterpret_cast<uint32_t*>(offset))-((index)*4));
         }
@@ -211,6 +229,8 @@ int main(int argc, char* argv[]) {
         }
         offset += 4 * *reinterpret_cast<uint32_t*>(offset);
     }
+    outfile.seekp(0);
+    outfile.write(reinterpret_cast<char*>(&header), sizeof(SPTHEADER));
     outfile.close();
     iconv_close(icv);
     std::cerr << "Injection completed." << std::endl;

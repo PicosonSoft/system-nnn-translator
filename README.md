@@ -2,9 +2,7 @@
 Simple tools to translate japanese visual novels based on the system-nnn engine.
 
 ### Current Status
-Workflow seems to work properly in Yami No Koe Zero files, but once the files are copied back to the game directory, the game crashes on new game.
-
-After running some tests, there is no checksum or hash check on the SPT files, changing the text in the SPT files does not cause the game to crash as long the strings are the same length as the original ones.
+Workflow works properly in Yami No Koe Zero files, and the game runs, but letters are too far appart and long lines are cut off.
 
 ### Overview
 First of all, I appologize for the sloppy code. This is a collection of C++ "scripts" put together to automate the translation of visual novels based on the system-nnn engine. It is not a library, but a set of tools that can be used to extract and translate text from these games. There is very little error handling and the code is a mismash of different examples of the libraries used. For this reason it is important to follow the instructions carefully and to use the tools in the order specified.

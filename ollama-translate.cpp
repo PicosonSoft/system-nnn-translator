@@ -16,6 +16,14 @@
 //#define MODEL "7shi/llama-translate:8b-q4_K_M"
 using json = nlohmann::json;
 
+std::vector<std::string> SplitLines(const std::string& str)
+{
+    std::regex regex("\r?\n");
+    std::vector<std::string> list(std::sregex_token_iterator(str.begin(), str.end(), regex, -1),
+                                  std::sregex_token_iterator());
+    return list;
+}
+
 int main(int argc, char* argv[]) {
   if (argc < 2) {
       std::cout << "Usage: " << argv[0] << " input.json [output.json]" << std::endl;
@@ -54,25 +62,32 @@ int main(int argc, char* argv[]) {
     ollama::setReadTimeout(300);
     ollama::setWriteTimeout(300);
     ollama::messages messages{};
-    messages.reserve((j.size()*2)+5);
+    messages.reserve((j.size()*10)+5);
     //messages.push_back({"user","I am going to give you game dialogue lines to translate to english, consider the context of the story, keep the structure of every line, use Romaji for given names."});
     ollama::response response{ollama::chat(MODEL, messages)};
     size_t line_count{0};
     for(auto& i: j)
     {
         //std::cerr << i["text"] << std::endl;
-        try{
-          messages.push_back({"user",i["text"]});
-          response = ollama::chat(MODEL, messages);
-          messages.push_back({"assistant",response});
-        } 
-        catch(ollama::exception& e)
+        auto lines = SplitLines(i["text"]);
+        std::string line{};
+        for(auto& k: lines)
         {
-          std::cerr << std::endl << e.what() << std::endl;
-          return -1;
+          try{
+            messages.push_back({"user",k});
+            response = ollama::chat(MODEL, messages);
+            messages.push_back({"assistant",response});
+            line += std::string{response} + "\r\n";
+          } 
+          catch(ollama::exception& e)
+          {
+            std::cerr << std::endl << e.what() << std::endl;
+            return -1;
+          }
+
         }
         //std::cerr << response << std::endl;
-        out.push_back(json::object({{"text",response}}));
+        out.push_back(json::object({{"text",line}}));
         std::cerr << "\rLines Translated: " << ++line_count << " of " << j.size() << std::flush;
     }
 

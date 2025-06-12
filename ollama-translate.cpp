@@ -62,8 +62,7 @@ int main(int argc, char* argv[]) {
     ollama::setReadTimeout(300);
     ollama::setWriteTimeout(300);
     ollama::messages messages{};
-    messages.reserve((j.size()*10)+5);
-    //messages.push_back({"user","I am going to give you game dialogue lines to translate to english, consider the context of the story, keep the structure of every line, use Romaji for given names."});
+    messages.reserve(16);
     ollama::response response{ollama::chat(MODEL, messages)};
     size_t line_count{0};
     for(auto& i: j)
@@ -73,7 +72,13 @@ int main(int argc, char* argv[]) {
         std::string line{};
         for(auto& k: lines)
         {
-          try{
+          try
+          {
+            if(messages.size() == messages.capacity())
+            {
+              std::shift_left(messages.begin(),messages.end(),2);
+              messages.resize(messages.size() - 2);
+            }
             messages.push_back({"user",k});
             response = ollama::chat(MODEL, messages);
             messages.push_back({"assistant",response});

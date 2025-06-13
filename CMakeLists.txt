@@ -91,3 +91,5 @@ endif()
 add_executable(ollama-translate ollama-translate.cpp)
 target_link_libraries(ollama-translate PRIVATE ${SOCKET_LIB})
 target_compile_definitions(ollama-translate PUBLIC -D_WIN32_WINNT=0x602)
+
+add_executable(exe-font-patcher exe-font-patcher.cpp)

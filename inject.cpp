@@ -29,6 +29,10 @@ std::vector<std::function<std::string(const std::string&)>> replacers
     REP(ç, c),
     REP(~, '〜'),
     REP("—",-),
+    REP("—",-),
+    REP("\r\n\"","\r\n「"),
+    REP("\"\r\n","」\r\n"),
+    REP("...","…"),
 };
 
 std::string ReplaceBadChars(const std::string& input)
@@ -119,7 +123,7 @@ int main(int argc, char* argv[]) {
         return -1;
     }
 
-    std::vector<std::vector<uint8_t>> strings{};
+    std::vector<std::string> strings{};
     // Collect Strings
     std::vector<uint8_t> out{};
     for(auto& json_text: j)

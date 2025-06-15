@@ -13,7 +13,7 @@ First of all, I appologize for the sloppy code. This is a collection of C++ "scr
 - `inject`: Injects the dialogue text from a JSON file into a decoded SPT file, utf8 text is converted to shift-jis.
 - `azure-translate`: Takes a Japanese JSON file and translates it using Micorsoft Translate, an azure account and a translation service must have been set up ahead of time as the key and region are required for use of the service.
 - `ollama-translate`: Takes a Japanese JSON file and translates it using Ollama, which must be installed and configured beforehand (Use the provided Modelfile).
-- `exe-font-patcher`: Takes the main executable file to change the font used from the Japanese SHIFT-JIS to Calibri, potentially allowing for UTF-8 support.
+- `formatter`: Takes a translated JSON file and formats the text such that there is a max of 3 lines per message.
 
 ### Requirements
 - C++20 compiler
@@ -25,13 +25,13 @@ First of all, I appologize for the sloppy code. This is a collection of C++ "scr
 - Ollama (for `ollama-translate`)
 
 ### Workflow
-1. Use `decode` to decode the SPT file (note, decoded files have the tps extension, that is spt backwards, this is just a preference to distinguish them which also reflects that the encoding is just XOR'ing the whole file, so turning the data 'backwards'... sort of).
+1. Use `decode` to decode the SPT file. Decoded files have the .tps extension, that is spt backwards, this is just a preference to distinguish them which also reflects that the encoding is just XOR'ing the whole file, plus the engine uses .xtx for text files.
 2. Use `extract` to extract the dialogue text into a JSON file.
 3. Use `azure-translate` or `ollama-translate` to translate the JSON file into English.
-4. Use `inject` to inject the translated text back into the decoded SPT file.
-5. Use `decode` again to encode the SPT file back.
-6. Replace the original SPT file with the newly encoded one.
-7. Optionally, use `exe-font-patcher` to patch the main executable to use Calibri.
+4. Use `formatter` to fix translated messages.
+5. Use `inject` to inject the translated text back into the decoded SPT file.
+6. Use `decode` again to encode the SPT file back.
+7. Replace the original SPT file with the newly encoded one.
 
 In order do bulk translation all executables can take a single input file and infer the output file name from it, this way you can use 'find' to find all SPT files and process them in one go.
 
@@ -45,7 +45,7 @@ The following table shows posible inputs and outputs for each tool in order of e
 | ollama-translate| `*_ja.json`               | `*_en.json`                   |
 | inject          | `*.tps` (`*_en.json`)     | `en/*.tps`                    |
 | decode          | `*.tps`                   | `*.spt`                       |
-| exe-font-patcher| `*.exe`                   | `*_en.exe`                       |
+| formatter       | `*.json`                  | `*.json`(overwrites the file) |
 
 Note: The `inject` tool will take a single path for the decoded SPT, but if so, the *_en.json for it must exist on the same directory.
 
@@ -56,6 +56,7 @@ To decode, extract, translate, inject and re-encode all SPT files in the current
 find . -maxdepth 1 -name "*.spt" -exec decode {} \;
 find . -maxdepth 1 -name "*.tps" -exec extract {} \;
 find . -maxdepth 1 -name "*_ja.json" -exec azure-translate {} <Subscription-Key> <Subscription-Region> \;
+find . -maxdepth 1 -name "*_en.json" -exec formatter {} \;
 find . -maxdepth 1 -name "*.tps" -exec inject {} \;
 find . -maxdepth 1 -name "en/*.tps" -exec decode {} \;
 ```

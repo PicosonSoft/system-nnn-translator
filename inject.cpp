@@ -15,36 +15,6 @@
 #include <functional>
 #include <nlohmann/json.hpp>
 
-#define REP(x,y) \
-    [](const std::string& s) -> std::string\
-    {\
-        return std::regex_replace( s, std::regex(#x), #y );\
-    }
-
-
-std::vector<std::function<std::string(const std::string&)>> replacers
-{
-    REP(ï, i),
-    REP(é, e),
-    REP(ç, c),
-    REP(~, '〜'),
-    REP("—",-),
-    REP("—",-),
-    REP("\r\n\"","\r\n「"),
-    REP("\"\r\n","」\r\n"),
-    REP("...","…"),
-};
-
-std::string ReplaceBadChars(const std::string& input)
-{
-    std::string result{input};
-    for(auto& i: replacers)
-    {
-        result = i(result);
-    }
-    return result;
-}
-
 using json = nlohmann::json;
 
 struct SPTHEADER{
@@ -128,7 +98,7 @@ int main(int argc, char* argv[]) {
     std::vector<uint8_t> out{};
     for(auto& json_text: j)
     {
-        std::string text{ReplaceBadChars(json_text["text"])};
+        std::string text{json_text["text"]};
         char* inptr{text.data()};
         size_t inbytesleft{text.size() + 1};
         size_t outbytesleft{inbytesleft * 4};

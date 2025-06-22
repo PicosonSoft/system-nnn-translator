@@ -1,6 +1,8 @@
 # system-nnn-translator
 Simple tools to translate japanese visual novels based on the system-nnn engine.
 
+If you find this useful, please consider supporting me on [![Ko-Fi](https://img.shields.io/badge/ko--fi-donate-orange.svg)](https://ko-fi.com/aeongames)
+
 ### Current Status
 Workflow works properly in Yami No Koe Zero files, the game runs, letters are too far appart and long lines are cut off, but font size and margin can be adjusted by editing init/printmessage.xtx with a regular text editor.
 

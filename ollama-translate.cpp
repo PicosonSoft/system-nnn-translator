@@ -12,7 +12,8 @@
 #include "nlohmann/json.hpp"
 #include "ollama.hpp"
 
-#define MODEL "visual-novel-translate"
+#define MODEL "7shi/gemma-2-jpn-translate:2b-instruct-q8_0"
+//#define MODEL "visual-novel-translate"
 //#define MODEL "7shi/llama-translate:8b-q4_K_M"
 using json = nlohmann::json;
 
@@ -25,45 +26,59 @@ std::vector<std::string> SplitLines(const std::string& str)
 }
 
 int main(int argc, char* argv[]) {
-  if (argc < 2) {
-      std::cout << "Usage: " << argv[0] << " input.json [output.json]" << std::endl;
-      return 1;
-  }
+    if (argc < 2) {
+        std::cout << "Usage: " << argv[0] << " input.json [output.json]" << std::endl;
+        return 1;
+    }
 
-  std::string output_file{argv[1]};
-  if (argc == 2)
-  {
-    output_file = std::regex_replace( output_file, std::regex("_ja"), "_en" );
-  }
-  else
-  {
-      output_file = argv[2];
-  }
-  json j{};
-  std::ifstream f(argv[1]);
-  try
-  {
-      j = json::parse(f);
-  }
-  catch (const json::exception& e)
-  {
-      std::cerr << "File: " << argv[1] << '\n';
-      std::cerr << e.what() << '\n';
-      return -1;
-  }
+    std::string output_file{argv[1]};
+    if (argc == 2)
+    {
+      output_file = std::regex_replace( output_file, std::regex("_ja"), "_en" );
+    }
+    else
+    {
+        output_file = argv[2];
+    }
+    json j{};
+    std::ifstream f(argv[1]);
+    try
+    {
+        j = json::parse(f);
+    }
+    catch (const json::exception& e)
+    {
+        std::cerr << "File: " << argv[1] << '\n';
+        std::cerr << e.what() << '\n';
+        return -1;
+    }
 
-  if(j.size()==0)
-  {
-      std::cerr << "Empty Json File: " << argv[1] << std::endl;
-      return -1;
-  }
+    if(j.size()==0)
+    {
+        std::cerr << "Empty Json File: " << argv[1] << std::endl;
+        return -1;
+    }
 
-  json out{};
+    json out{};
     ollama::setReadTimeout(300);
     ollama::setWriteTimeout(300);
     ollama::messages messages{};
     messages.reserve(16);
     ollama::response response{ollama::chat(MODEL, messages)};
+
+    // Prep the model for Japanese to English Translation
+    try
+    {    
+      messages.push_back({"user","Translate to English"});
+      response = ollama::chat(MODEL, messages);
+      messages.push_back({"assistant",response});
+    }
+    catch(ollama::exception& e)
+    {
+      std::cerr << std::endl << e.what() << std::endl;
+      return -1;
+    }
+
     size_t line_count{0};
     for(auto& i: j)
     {
@@ -89,18 +104,17 @@ int main(int argc, char* argv[]) {
             std::cerr << std::endl << e.what() << std::endl;
             return -1;
           }
-
         }
         //std::cerr << response << std::endl;
         out.push_back(json::object({{"text",line}}));
         std::cerr << "\rLines Translated: " << ++line_count << " of " << j.size() << std::flush;
     }
 
-  std::cerr << std::endl << "Writting " << output_file.c_str() << std::endl;
-  std::ofstream o(output_file.c_str());
-  o << std::setw(4) << out << std::endl;
-  o.close();
+    std::cerr << std::endl << "Writting " << output_file.c_str() << std::endl;
+    std::ofstream o(output_file.c_str());
+    o << std::setw(4) << out << std::endl;
+    o.close();
 
-  std::cerr << "Translation Complete" << std::endl;
-  return 0;
+    std::cerr << "Translation Complete" << std::endl;
+    return 0;
 }

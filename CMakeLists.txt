@@ -45,10 +45,12 @@ list(APPEND CMAKE_PREFIX_PATH "${CMAKE_BINARY_DIR}")
 
 find_package(Iconv REQUIRED)
 find_package(CURL REQUIRED)
+if(WIN32)
 find_library(SOCKET_LIB
              NAMES ws2_32
              HINTS ${CMAKE_INSTALL_FULL_LIBDIR}
 )
+endif()
 
 find_path(JSON_HPP_DIR nlohmann/json.hpp)
 

@@ -64,7 +64,7 @@ std::string FormatLine(const std::string& str)
         return !std::isspace(ch);
     }).base(), second_line.end());
 
-    size_t max_line_lenght{std::max(second_line.size()/3,48ul)};
+    size_t max_line_lenght{std::max(second_line.size()/3, static_cast<size_t>(48))};
 
     size_t index{max_line_lenght};
     size_t line_count{};

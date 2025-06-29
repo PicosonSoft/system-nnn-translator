@@ -64,7 +64,7 @@ int main(int argc, char* argv[]) {
     ollama::setWriteTimeout(300);
     ollama::messages messages{};
     messages.reserve(16);
-    ollama::response response{ollama::chat(MODEL, messages)};
+    ollama::response response{};
 
     // Prep the model for Japanese to English Translation
     try
@@ -75,7 +75,8 @@ int main(int argc, char* argv[]) {
     }
     catch(ollama::exception& e)
     {
-      std::cerr << std::endl << e.what() << std::endl;
+      std::cerr << e.what() << std::endl;
+      std::cerr << "On file:" << argv[1] << std::endl;
       return -1;
     }
 
@@ -102,6 +103,7 @@ int main(int argc, char* argv[]) {
           catch(ollama::exception& e)
           {
             std::cerr << std::endl << e.what() << std::endl;
+            std::cerr << "On file:" << argv[1] << std::endl;
             return -1;
           }
         }

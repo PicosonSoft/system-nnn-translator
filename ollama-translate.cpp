@@ -13,8 +13,8 @@
 #include "nlohmann/json.hpp"
 #include "ollama.hpp"
 
-#define MODEL "7shi/gemma-2-jpn-translate:2b-instruct-q8_0"
-//#define MODEL "visual-novel-translate"
+//#define MODEL "7shi/gemma-2-jpn-translate:2b-instruct-q8_0"
+#define MODEL "visual-novel-translate"
 //#define MODEL "7shi/llama-translate:8b-q4_K_M"
 using json = nlohmann::json;
 
@@ -139,7 +139,7 @@ int main(int argc, char* argv[]) {
     {    
       messages.push_back({"user","Translate from Japanese to English, plain text"});
       response = ollama::chat(MODEL, messages);
-      messages.push_back({"model",response});
+      messages.push_back({"assistant",response});
     }
     catch(ollama::exception& e)
     {
@@ -175,7 +175,7 @@ int main(int argc, char* argv[]) {
             messages.push_back({"user",Replace(charaname_replacers,k)});
             response = ollama::chat(MODEL, messages);
 #if 0
-            messages.push_back({"model",response});
+            messages.push_back({"assistant",response});
 #else
             messages.pop_back();
 #endif

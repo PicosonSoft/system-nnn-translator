@@ -8,6 +8,7 @@
 #include "nlohmann/json.hpp"
 
 using json = nlohmann::json;
+const size_t maxline{3};
 
 #define REP(x,y) \
     [](const std::string& s) -> std::string\
@@ -18,16 +19,18 @@ using json = nlohmann::json;
 
 std::vector<std::function<std::string(const std::string&)>> replacers
 {
-    REP("ï", "i"),
+    REP("ï|ī", "i"),
     REP("é", "e"),
     REP("ç", "c"),
-    REP("~", "〜"),
+    REP("ū","u"),
+    REP("~|～", "〜"),
     REP("—","-"),
     REP("\\.\\.\\.","…"),
     REP("　"," "),
     REP("？","?"),
     REP("「","\""),
-    REP("」","\""),    
+    REP("」","\""),
+    REP("ō","o"),
 };
 
 std::string ReplaceBadChars(const std::string& input)
@@ -55,7 +58,7 @@ std::string FormatLine(const std::string& str, size_t& not_formated, size_t& for
     if(first_newline==std::string::npos||first_newline+2==str.size())
     {
         ++not_formated;
-        return {first_newline==std::string::npos ? str + "\r\n" : str};
+        return ReplaceBadChars(first_newline==std::string::npos ? str + "\r\n" : str);
     }
     std::string first_line{ReplaceBadChars(str.substr(0,first_newline+2))};
     std::string second_line{ReplaceBadChars(str.substr(first_newline+2))};
@@ -73,7 +76,7 @@ std::string FormatLine(const std::string& str, size_t& not_formated, size_t& for
         if(!format_needed)
         {
             ++not_formated;
-            return str;
+            return ReplaceBadChars(str);
         }
     }
     ++formated;
@@ -88,7 +91,7 @@ std::string FormatLine(const std::string& str, size_t& not_formated, size_t& for
         return !std::isspace(ch);
     }).base(), second_line.end());
 
-    size_t max_line_lenght{std::max(second_line.size()/3, static_cast<size_t>(48))};
+    size_t max_line_lenght{std::max(second_line.size()/maxline, static_cast<size_t>(48))};
 
     size_t index{max_line_lenght};
     size_t line_count{};
@@ -104,9 +107,9 @@ std::string FormatLine(const std::string& str, size_t& not_formated, size_t& for
         index += (max_line_lenght+1);
         ++line_count;
     }
-    if(line_count>3)
+    if(line_count>maxline)
     {
-        std::cerr << "More than 3 lines:" << std::endl << second_line << std::endl;
+        std::cerr << "More than "<< maxline <<" lines:" << std::endl << second_line << std::endl;
     }
 
     return first_line+second_line+"\r\n";

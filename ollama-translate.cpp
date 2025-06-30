@@ -9,6 +9,7 @@
 #include <cstring>
 #include <locale>
 #include <regex>
+#include <filesystem>
 #include "nlohmann/json.hpp"
 #include "ollama.hpp"
 
@@ -25,21 +26,89 @@ std::vector<std::string> SplitLines(const std::string& str)
     return list;
 }
 
+std::string Replace(const std::vector<std::function<std::string(const std::string&)>>& replacers, const std::string& input)
+{
+    std::string result{input};
+    for(auto& i: replacers)
+    {
+        result = i(result);
+    }
+    return result;
+}
+
+std::string Match(const std::vector<std::function<std::string(const std::string&)>>& matchers, const std::string& input)
+{
+    for(auto& i: matchers)
+    {
+        auto result{i(input)};
+        if(!result.empty())
+        {
+          return result;
+        }
+    }
+    return {};
+}
+
 int main(int argc, char* argv[]) {
     if (argc < 2) {
         std::cout << "Usage: " << argv[0] << " input.json [output.json]" << std::endl;
         return 1;
     }
-
+    json charaname{};
+    size_t charaname_index{0};
     std::string output_file{argv[1]};
-    if (argc == 2)
+    std::vector<std::function<std::string(const std::string&)>> charaname_replacers{};
+    std::vector<std::function<std::string(const std::string&)>> charaname_matchers{};
+    if (argc == 2 | argc == 3 && std::filesystem::path(argv[2]).filename()=="charaname.json")
     {
-      output_file = std::regex_replace( output_file, std::regex("_ja"), "_en" );
+        output_file = std::regex_replace( output_file, std::regex("_ja"), "_en" );
+        if(argc==3)
+        {
+          charaname_index = 2;
+        }
     }
-    else
+    else if(argc>2)
     {
         output_file = argv[2];
+        if(argc>3)
+        {
+          charaname_index = 3;
+        }
     }
+
+    if(charaname_index!=0)
+    {
+      std::ifstream f(argv[charaname_index]);
+      try
+      {
+          charaname = json::parse(f);
+      }
+      catch (const json::exception& e)
+      {
+          std::cerr << "File: " << argv[charaname_index] << '\n';
+          std::cerr << e.what() << '\n';
+          return -1;
+      }
+      if(charaname.size()!=0)
+      {
+        for(auto& i: charaname)
+        {
+          charaname_replacers.push_back(
+          [i](const std::string& s) -> std::string
+              {
+                  return std::regex_replace( s, std::regex(std::string(i["from"])),std::string(i["to"]));
+              }            
+          );
+          charaname_matchers.push_back(
+          [i](const std::string& s) -> std::string
+              {
+                  return (s==std::string{i["from"]}) ? std::string{i["to"]} : std::string{};
+              }            
+          );
+        }
+      }
+    }
+
     json j{};
     std::ifstream f(argv[1]);
     try
@@ -52,7 +121,6 @@ int main(int argc, char* argv[]) {
         std::cerr << e.what() << '\n';
         return -1;
     }
-
     if(j.size()==0)
     {
         std::cerr << "Empty Json File: " << argv[1] << std::endl;
@@ -69,9 +137,9 @@ int main(int argc, char* argv[]) {
     // Prep the model for Japanese to English Translation
     try
     {    
-      messages.push_back({"user","Translate to English"});
+      messages.push_back({"user","Translate from Japanese to English, plain text"});
       response = ollama::chat(MODEL, messages);
-      messages.push_back({"assistant",response});
+      messages.push_back({"model",response});
     }
     catch(ollama::exception& e)
     {
@@ -83,21 +151,34 @@ int main(int argc, char* argv[]) {
     size_t line_count{0};
     for(auto& i: j)
     {
-        //std::cerr << i["text"] << std::endl;
         auto lines = SplitLines(i["text"]);
         std::string line{};
         for(auto& k: lines)
         {
+          //std::cerr << k << std::endl;
+          // If we have a charaname file, avoid translating character names
+          auto charname = Match(charaname_matchers,k);
+          if(!charname.empty())
+          {
+            line+=charname+"\r\n";
+            continue;
+          }
           try
           {
+#if 0
             if(messages.size() == messages.capacity())
             {
               std::shift_left(messages.begin(),messages.end(),2);
               messages.resize(messages.size() - 2);
             }
-            messages.push_back({"user",k});
+#endif
+            messages.push_back({"user",Replace(charaname_replacers,k)});
             response = ollama::chat(MODEL, messages);
-            messages.push_back({"assistant",response});
+#if 0
+            messages.push_back({"model",response});
+#else
+            messages.pop_back();
+#endif
             line += std::string{response} + "\r\n";
           } 
           catch(ollama::exception& e)
@@ -109,7 +190,7 @@ int main(int argc, char* argv[]) {
         }
         //std::cerr << response << std::endl;
         out.push_back(json::object({{"text",line}}));
-        std::cerr << "\rLines Translated: " << ++line_count << " of " << j.size() << std::flush;
+        std::cerr << "\rMessages Translated: " << ++line_count << " of " << j.size() << std::flush;
     }
 
     std::cerr << std::endl << "Writting " << output_file.c_str() << std::endl;

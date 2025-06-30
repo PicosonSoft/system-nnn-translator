@@ -113,7 +113,7 @@ int main(int argc, char* argv[]) {
             std::cerr << "JSON line " << json_text << std::endl;
             for(size_t i=0;i < std::min(inbytesleft,static_cast<size_t>(4));++i)
             {
-                std::cerr << " '" << static_cast<uint8_t>(inptr[i]) << "' " << (static_cast<uint32_t>(inptr[i]) & 0x000000ff) << std::dec;
+                std::cerr << " '" << static_cast<uint8_t>(inptr[i]) << "' " << std::hex << (static_cast<uint32_t>(inptr[i]) & 0x000000ff) << std::dec;
             }
             std::cerr << std::endl << inptr << std::endl;
             iconv_close(icv);

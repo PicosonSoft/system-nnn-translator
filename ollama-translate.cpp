@@ -10,12 +10,11 @@
 #include <locale>
 #include <regex>
 #include <filesystem>
+#include <algorithm>
 #include "nlohmann/json.hpp"
 #include "ollama.hpp"
 
-//#define MODEL "7shi/gemma-2-jpn-translate:2b-instruct-q8_0"
 #define MODEL "visual-novel-translate"
-//#define MODEL "7shi/llama-translate:8b-q4_K_M"
 using json = nlohmann::json;
 
 std::vector<std::string> SplitLines(const std::string& str)
@@ -132,30 +131,46 @@ int main(int argc, char* argv[]) {
     ollama::setWriteTimeout(300);
     ollama::messages messages{};
     messages.reserve(16);
-    ollama::response response{};
+    /* 
+    The model gets creative with onomatopoeias,
+    adding acknowledgements or getting sassy when translating them
+    so bait it with messages that better represents what is expected.
 
-    // Prep the model for Japanese to English Translation
-    try
-    {    
-      messages.push_back({"user","Translate from Japanese to English, plain text"});
-      response = ollama::chat(MODEL, messages);
-      messages.push_back({"assistant",response});
-    }
-    catch(ollama::exception& e)
+    NOTE: THIS IS PROBABLY NOT NECESSARY. 
+    The halucinations and sassynes might have been the result of passing
+    empty strings to translate which has already been addressed.
+    */
+    ollama::messages no_character_messages
     {
-      std::cerr << e.what() << std::endl;
-      std::cerr << "On file:" << argv[1] << std::endl;
-      return -1;
-    }
+        ollama::message{"user","バタン！"},
+        ollama::message{"assistant","BANG!"},
+        ollama::message{"user","コンコン"},
+        ollama::message{"assistant","Knock knock"},
+        ollama::message{"user","チュプ、んん、チュパ"},
+        ollama::message{"assistant","Chup, mmm, Chupa"},
+        ollama::message{"user","ドンドン"},
+        ollama::message{"assistant","Boom boom"},
+        ollama::message{"user","ガッシャーン"},
+        ollama::message{"assistant","Crash!"},
+        ollama::message{"user","じょろじょろ"},
+        ollama::message{"assistant","Jororo jororo"}
+    };
+    no_character_messages.reserve(no_character_messages.size()+1);
+    ollama::response response{};
 
     size_t line_count{0};
     for(auto& i: j)
     {
         auto lines = SplitLines(i["text"]);
+        bool no_character_name{!lines.empty() && lines[0].empty()};
         std::string line{};
         for(auto& k: lines)
         {
-          //std::cerr << k << std::endl;
+          if(k.empty())
+          {
+            line+="\r\n";
+            continue;
+          }
           // If we have a charaname file, avoid translating character names
           auto charname = Match(charaname_matchers,k);
           if(!charname.empty())
@@ -165,21 +180,25 @@ int main(int argc, char* argv[]) {
           }
           try
           {
-#if 0
-            if(messages.size() == messages.capacity())
+            if(no_character_name)
             {
-              std::shift_left(messages.begin(),messages.end(),2);
-              messages.resize(messages.size() - 2);
+              no_character_messages.push_back({"user",Replace(charaname_replacers,k)});
+              response = ollama::chat(MODEL, no_character_messages);
+              no_character_messages.pop_back();
+              line += std::string{response} + "\r\n";
             }
-#endif
-            messages.push_back({"user",Replace(charaname_replacers,k)});
-            response = ollama::chat(MODEL, messages);
-#if 0
-            messages.push_back({"assistant",response});
-#else
-            messages.pop_back();
-#endif
-            line += std::string{response} + "\r\n";
+            else
+            {
+              if(messages.size() == messages.capacity())
+              {
+                std::shift_left(messages.begin(),messages.end(),2);
+                messages.resize(messages.size() - 2);
+              }
+              messages.push_back({"user",Replace(charaname_replacers,k)});
+              response = ollama::chat(MODEL, messages);
+              messages.push_back({"assistant",response});
+              line += std::string{response} + "\r\n";
+            }
           } 
           catch(ollama::exception& e)
           {

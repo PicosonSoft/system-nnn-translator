@@ -58,7 +58,51 @@ To decode, extract, translate, inject and re-encode all SPT files in the current
 find . -maxdepth 1 -name "*.spt" -exec decode {} \;
 find . -maxdepth 1 -name "*.tps" -exec extract {} \;
 find . -maxdepth 1 -name "*_ja.json" -exec azure-translate {} <Subscription-Key> <Subscription-Region> \;
+find . -maxdepth 1 -name "*_ja.json" -exec ollama-translate {} charaname.json \;
 find . -maxdepth 1 -name "*_en.json" -exec formatter {} \;
 find . -maxdepth 1 -name "*.tps" -exec inject {} \;
 find . -maxdepth 1 -name "en/*.tps" -exec decode {} \;
+```
+
+In order to use ollama-translate, you must have Ollama installed and a model created with one of the provided Modelfiles. You can create the model by running (pick one):
+
+```bash
+ollama create visual-novel-translate -f 7shi-llama-translate
+ollama create visual-novel-translate -f 7shi-gemma-2-jpn-translate
+```
+
+The model must be named `visual-novel-translate`, you can try other models by changing the modelfiles or creating your own.
+To remove the model and create a new one, you can run:
+
+```bash
+ollama rm visual-novel-translate
+```
+
+ollama-translate can use a `charaname.json` file to fix character names and avoid alternate translations, this file can be created using the `charaname.txt` file
+available in the game files. This file contains the character names in Shift-JIS encoding. You can convert it to UTF-8 format using the following command:
+
+```bash
+iconv -f SHIFT-JIS -t UTF-8 charaname.txt > charaname.json
+```
+
+After that, edit the file and format it as a JSON array, like this:
+
+```json
+[
+  {"from":"charaname1_ja", "to":"charaname1_en"},
+  {"from":"charaname2_ja", "to":"charaname2_en"},
+  ...
+]
+```
+
+then you can use it with the `ollama-translate` tool by passing it as a last argument:
+
+```bash
+ollama-translate op_ja.json charaname.json
+```
+
+Or
+
+```bash
+ollama-translate op_ja.json op_en.json charaname.json
 ```

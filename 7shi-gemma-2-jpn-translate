@@ -14,3 +14,5 @@ PARAMETER stop <start_of_turn>
 PARAMETER stop <end_of_turn>
 MESSAGE user "Translate from Japanese to English, plain text, do not add any additional context or subject."
 MESSAGE assistant "OK"
+MESSAGE user "こんにちは"
+MESSAGE assistant "Hello"

@@ -8,12 +8,14 @@
 #include <string>
 #include <cstring>
 #include <locale>
+#include <codecvt>
 #include <regex>
 #include <filesystem>
 #include <algorithm>
 #include "nlohmann/json.hpp"
 #include "ollama.hpp"
 
+#define DEBUG_OUTPUT false
 #define MODEL "visual-novel-translate"
 using json = nlohmann::json;
 
@@ -49,6 +51,14 @@ std::string Match(const std::vector<std::function<std::string(const std::string&
 }
 
 int main(int argc, char* argv[]) {
+
+#ifdef _WIN32
+    // Enable UTF-8 output on Windows console
+    SetConsoleOutputCP(CP_UTF8);
+    //SetConsoleCP(CP_UTF8);
+    //_setmode(_fileno(stdout), _O_U8TEXT);
+    //_setmode(_fileno(stderr), _O_U8TEXT);
+#endif
     if (argc < 2) {
         std::cout << "Usage: " << argv[0] << " input.json [output.json]" << std::endl;
         return 1;
@@ -183,9 +193,20 @@ int main(int argc, char* argv[]) {
             if(no_character_name)
             {
               no_character_messages.push_back({"user",Replace(charaname_replacers,k)});
+              if(DEBUG_OUTPUT)
+              {
+                for(auto& m: no_character_messages)
+                {
+                  std::cerr << m << std::endl;
+                }
+              }
               response = ollama::chat(MODEL, no_character_messages);
               no_character_messages.pop_back();
               line += std::string{response} + "\r\n";
+              if(DEBUG_OUTPUT)
+              {
+                  std::cerr << response << std::endl;
+              }
             }
             else
             {
@@ -195,8 +216,10 @@ int main(int argc, char* argv[]) {
                 messages.resize(messages.size() - 2);
               }
               messages.push_back({"user",Replace(charaname_replacers,k)});
+              if(DEBUG_OUTPUT) {std::cerr << messages.back() << std::endl;}
               response = ollama::chat(MODEL, messages);
               messages.push_back({"assistant",response});
+              if(DEBUG_OUTPUT) {std::cerr << messages.back() << std::endl;}
               line += std::string{response} + "\r\n";
             }
           } 
@@ -209,7 +232,7 @@ int main(int argc, char* argv[]) {
             }
             std::cerr << "On file:" << argv[1] << std::endl;
             return -1;
-          }
+          }            
         }
         //std::cerr << response << std::endl;
         out.push_back(json::object({{"text",line}}));

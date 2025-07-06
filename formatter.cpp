@@ -53,6 +53,7 @@ std::vector<std::string> SplitLines(const std::string& str)
 std::string FormatLine(const std::string& str, size_t& not_formated, size_t& formated)
 {
     const static std::regex empty_space("[\\n\\r\\s]+");
+    const static std::regex double_quotes("\"[\\n\\r\\s]+\"");
     // We never modify the first line which is usually a character's name
     auto first_newline{str.find_first_of("\r\n")};
     if(first_newline==std::string::npos||first_newline+2==str.size())
@@ -81,6 +82,7 @@ std::string FormatLine(const std::string& str, size_t& not_formated, size_t& for
     }
     ++formated;
     second_line = std::regex_replace( second_line, empty_space, " " );
+    second_line = std::regex_replace( second_line, double_quotes, " " );
     // Remove leading whitespace
     second_line.erase(second_line.begin(), std::find_if(second_line.begin(), second_line.end(), [](unsigned char ch) {
         return !std::isspace(ch);

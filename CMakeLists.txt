@@ -96,3 +96,6 @@ target_compile_definitions(ollama-translate PUBLIC -D_WIN32_WINNT=0x602)
 
 add_executable(formatter formatter.cpp)
 target_compile_definitions(formatter PUBLIC -DNOMINMAX)
+
+add_executable(extract-images extract-images.cpp)
+target_compile_definitions(extract-images PUBLIC -DNOMINMAX -DWIN32_LEAN_AND_MEAN)

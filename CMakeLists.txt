@@ -94,6 +94,10 @@ add_executable(ollama-translate ollama-translate.cpp)
 target_link_libraries(ollama-translate PRIVATE ${SOCKET_LIB})
 target_compile_definitions(ollama-translate PUBLIC -D_WIN32_WINNT=0x602)
 
+add_executable(ollama-generate-charaname ollama-generate-charaname.cpp)
+target_link_libraries(ollama-generate-charaname PRIVATE ${SOCKET_LIB})
+target_compile_definitions(ollama-generate-charaname PUBLIC -D_WIN32_WINNT=0x602)
+
 add_executable(formatter formatter.cpp)
 target_compile_definitions(formatter PUBLIC -DNOMINMAX)
 
